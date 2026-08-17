@@ -5,11 +5,17 @@
   gather_facts: false
 
   tasks:
-    - name: Find all files and directories
+    - name: Find visible files and directories in home
       ansible.builtin.find:
-        paths: /
+        paths:
+          - /home
+          - /opt
+          - /var
+          - /tmp
         recurse: true
-        file_type: any
+        file_type: file
+        excludes:
+          - ".*"
       register: filesystem
 
     - name: Display filesystem structure
