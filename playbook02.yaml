@@ -1,0 +1,18 @@
+---
+- name: Read VM filesystem structure
+  hosts: all
+  become: true
+  gather_facts: false
+
+  tasks:
+    - name: Find all files and directories
+      ansible.builtin.find:
+        paths: /
+        recurse: true
+        file_type: any
+      register: filesystem
+
+    - name: Display filesystem structure
+      ansible.builtin.debug:
+        msg: "{{ item.path }}"
+      loop: "{{ filesystem.files }}"
