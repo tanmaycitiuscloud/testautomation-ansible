@@ -1,0 +1,11 @@
+---
+- name: Test Ansible Galaxy
+  hosts: all
+  become: true
+
+  tasks:
+
+    - name: Install package
+      ansible.builtin.package:
+        name: nginx
+        state: present
