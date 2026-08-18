@@ -1,0 +1,28 @@
+---
+- name: Debug Python environment
+  hosts: all
+  gather_facts: false
+
+  tasks:
+    - name: Show Python interpreter
+      ansible.builtin.debug:
+        var: ansible_python_interpreter
+
+    - name: Show Python version
+      ansible.builtin.command:
+        cmd: /usr/bin/python3 --version
+      register: python_version
+
+    - name: Show Python location
+      ansible.builtin.command:
+        cmd: /usr/bin/python3 -c "import sys; print(sys.executable)"
+
+    - name: Test dnf Python module
+      ansible.builtin.command:
+        cmd: /usr/bin/python3 -c "import dnf; print(dnf.__version__)"
+      register: dnf_test
+      changed_when: false
+
+    - name: Display dnf test
+      ansible.builtin.debug:
+        var: dnf_test
