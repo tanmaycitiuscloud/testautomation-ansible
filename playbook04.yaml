@@ -6,37 +6,36 @@
 
   tasks:
 
+  - name: Show execution environment
+    ansible.builtin.debug:
+      msg:
+      - "Inventory hostname: {{ inventory_hostname }}"
+      - "Ansible hostname: {{ ansible_hostname }}"
+      - "Python: {{ ansible_python.executable }}"
+      - "OS: {{ ansible_distribution }}"
+      - "OS version: {{ ansible_distribution_version }}"
+      - "Connection: {{ ansible_connection }}"
+
     - name: Display target host
       ansible.builtin.debug:
         msg: "Checking nginx on {{ inventory_hostname }}"
 
-    - name: Collect service facts
-      ansible.builtin.service_facts:
-
-    - name: Check if nginx is installed
-      ansible.builtin.package_facts:
-        manager: auto
-
-    - name: Fail if nginx is not installed
-      ansible.builtin.fail:
-        msg: "Nginx is not installed on {{ inventory_hostname }}"
-      when: "'nginx' not in ansible_facts.packages"
+    - name: Check nginx service
+      ansible.builtin.command:
+        cmd: systemctl is-active nginx
+      register: nginx_status
+      changed_when: false
+      failed_when: false
 
     - name: Display current nginx status
       ansible.builtin.debug:
-        msg: >-
-          Nginx current state:
-          {{ ansible_facts.services['nginx.service'].state
-             if 'nginx.service' in ansible_facts.services
-             else 'service not found' }}
+        msg: "Current nginx status: {{ nginx_status.stdout | default('unknown') }}"
 
     - name: Start nginx if it is stopped
       ansible.builtin.service:
         name: nginx
         state: started
-      when:
-        - "'nginx.service' in ansible_facts.services"
-        - ansible_facts.services['nginx.service'].state != 'running'
+      when: nginx_status.rc != 0
       register: nginx_remediation
 
     - name: Enable nginx at boot
@@ -44,26 +43,20 @@
         name: nginx
         enabled: true
 
-    - name: Report remediation result
-      ansible.builtin.debug:
-        msg: >-
-          {% if nginx_remediation is changed %}
-          Nginx was stopped and has been automatically started.
-          {% else %}
-          Nginx was already running. No remediation was required.
-          {% endif %}
-
-    - name: Refresh service facts
-      ansible.builtin.service_facts:
-
     - name: Verify nginx is running
-      ansible.builtin.assert:
-        that:
-          - "'nginx.service' in ansible_facts.services"
-          - ansible_facts.services['nginx.service'].state == 'running'
-        fail_msg: "REMEDIATION FAILED: Nginx is still not running."
-        success_msg: "SUCCESS: Nginx is running correctly."
+      ansible.builtin.command:
+        cmd: systemctl is-active nginx
+      register: nginx_final_status
+      changed_when: false
+
+    - name: Fail if nginx is still not running
+      ansible.builtin.fail:
+        msg: "REMEDIATION FAILED: nginx is still not running."
+      when: nginx_final_status.stdout != "active"
 
     - name: Display final result
       ansible.builtin.debug:
-        msg: "Nginx health check and automatic remediation completed successfully."
+        msg: >-
+          Nginx remediation completed successfully.
+          Remediation required:
+          {{ nginx_remediation.changed | default(false) }}
