@@ -1,0 +1,69 @@
+---
+- name: Nginx Automatic Remediation
+  hosts: all
+  become: true
+  gather_facts: true
+
+  tasks:
+
+    - name: Display target host
+      ansible.builtin.debug:
+        msg: "Checking nginx on {{ inventory_hostname }}"
+
+    - name: Collect service facts
+      ansible.builtin.service_facts:
+
+    - name: Check if nginx is installed
+      ansible.builtin.package_facts:
+        manager: auto
+
+    - name: Fail if nginx is not installed
+      ansible.builtin.fail:
+        msg: "Nginx is not installed on {{ inventory_hostname }}"
+      when: "'nginx' not in ansible_facts.packages"
+
+    - name: Display current nginx status
+      ansible.builtin.debug:
+        msg: >-
+          Nginx current state:
+          {{ ansible_facts.services['nginx.service'].state
+             if 'nginx.service' in ansible_facts.services
+             else 'service not found' }}
+
+    - name: Start nginx if it is stopped
+      ansible.builtin.service:
+        name: nginx
+        state: started
+      when:
+        - "'nginx.service' in ansible_facts.services"
+        - ansible_facts.services['nginx.service'].state != 'running'
+      register: nginx_remediation
+
+    - name: Enable nginx at boot
+      ansible.builtin.service:
+        name: nginx
+        enabled: true
+
+    - name: Report remediation result
+      ansible.builtin.debug:
+        msg: >-
+          {% if nginx_remediation is changed %}
+          Nginx was stopped and has been automatically started.
+          {% else %}
+          Nginx was already running. No remediation was required.
+          {% endif %}
+
+    - name: Refresh service facts
+      ansible.builtin.service_facts:
+
+    - name: Verify nginx is running
+      ansible.builtin.assert:
+        that:
+          - "'nginx.service' in ansible_facts.services"
+          - ansible_facts.services['nginx.service'].state == 'running'
+        fail_msg: "REMEDIATION FAILED: Nginx is still not running."
+        success_msg: "SUCCESS: Nginx is running correctly."
+
+    - name: Display final result
+      ansible.builtin.debug:
+        msg: "Nginx health check and automatic remediation completed successfully."
