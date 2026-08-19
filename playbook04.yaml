@@ -1,3 +1,4 @@
+
 ---
 - name: Nginx Automatic Remediation
   hosts: all
@@ -5,16 +6,15 @@
   gather_facts: true
 
   tasks:
-
     - name: Show execution environment
-	  ansible.builtin.debug:
+      ansible.builtin.debug:
         msg:
-		  - "Inventory hostname: {{ inventory_hostname }}"
-		  - "Ansible hostname: {{ ansible_hostname }}"
-		  - "Python: {{ ansible_python.executable }}"
-		  - "OS: {{ ansible_distribution }}"
-		  - "OS version: {{ ansible_distribution_version }}"
-		  - "Connection: {{ ansible_connection }}"
+          - "Inventory hostname: {{ inventory_hostname }}"
+          - "Ansible hostname: {{ ansible_hostname }}"
+          - "Python: {{ ansible_python.executable }}"
+          - "OS: {{ ansible_distribution }}"
+          - "OS version: {{ ansible_distribution_version }}"
+          - "Connection: {{ ansible_connection }}"
 
     - name: Display target host
       ansible.builtin.debug:
@@ -48,6 +48,7 @@
         cmd: systemctl is-active nginx
       register: nginx_final_status
       changed_when: false
+      failed_when: false
 
     - name: Fail if nginx is still not running
       ansible.builtin.fail:
